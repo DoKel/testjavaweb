@@ -7,11 +7,13 @@ public class UserInfo {
     private String firstName;
     private String lastName;
     private URL photoUrl;
+    private int id;
 
-    public UserInfo(String firstName, String lastName, URL photoUrl){
+    public UserInfo(String firstName, String lastName, URL photoUrl, int id){
         this.firstName = firstName;
         this.lastName = lastName;
         this.photoUrl = photoUrl;
+        this.id = id;
     }
 
     public String getFirstName() {
@@ -24,5 +26,9 @@ public class UserInfo {
 
     public URL getPhotoUrl() {
         return photoUrl;
+    }
+
+    public int getId() {
+        return id;
     }
 }

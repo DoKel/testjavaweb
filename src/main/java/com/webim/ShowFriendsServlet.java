@@ -134,7 +134,8 @@ public class ShowFriendsServlet extends HttpServlet {
                             new UserInfo(
                                     friend.getString("first_name"),
                                     friend.getString("last_name"),
-                                    new URL(friend.getString("photo_max"))
+                                    new URL(friend.getString("photo_max")),
+                                    friend.getInt("id")
                             )
                     );
                 }
