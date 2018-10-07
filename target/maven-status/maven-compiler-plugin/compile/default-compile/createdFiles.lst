@@ -1,3 +1,4 @@
 com/webim/ShowFriendsServlet.class
+com/webim/BadResponseException.class
 com/webim/RedirectToAuthServlet.class
 com/webim/UserInfo.class

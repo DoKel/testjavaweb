@@ -2,6 +2,7 @@ package com.webim;
 
 import javax.servlet.http.*;
 import java.io.IOException;
+import java.util.Date;
 import javax.servlet.http.HttpServlet;
 
 
@@ -9,13 +10,14 @@ public class RedirectToAuthServlet extends HttpServlet {
 
     public static long appid = 6713188;
     public static String displayType = "page";
-    public static String redirectUrl = "http://127.0.0.1:8888/showFriends";
+    public static String redirectUrl = "http://188.166.194.200/showFriends";
     public static String permissions = "friends,offline";
     public static String responseType = "code";
     public static String apiVersion = "5.85";
 
     public void doGet(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse)
             throws IOException {
+        this.getServletConfig().getServletContext().setAttribute("timeOfLastRequest" , new Date());
         StringBuilder address = new StringBuilder();
 
         address.append("https://oauth.vk.com/authorize?");
@@ -37,13 +39,24 @@ public class RedirectToAuthServlet extends HttpServlet {
         address.append("&");
 
         address.append("response_type=");
-        address.append(responseType);
+        if(this.getServletConfig().getServletContext().getAttribute("access_token") == null) {
+            address.append(responseType);
+        }
+        else address.append("token");
         address.append("&");
 
         address.append("v=");
         address.append(apiVersion);
         address.append("&");
-
+        Date timeOfLastrequest = (Date)(this.getServletConfig().getServletContext().getAttribute("timeOfLastRequest"));
+        if(timeOfLastrequest.getTime() - new Date().getTime() < 500) {
+            this.getServletConfig().getServletContext().setAttribute("timeOfLastRequest", new Date());
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
         httpServletResponse.sendRedirect(address.toString());
     }
 }

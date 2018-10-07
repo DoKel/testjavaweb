@@ -1,6 +1,7 @@
 package com.webim;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import javax.servlet.ServletException;
@@ -11,9 +12,12 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.Scanner;
 
 public class ShowFriendsServlet extends HttpServlet {
 
@@ -23,48 +27,66 @@ public class ShowFriendsServlet extends HttpServlet {
     public static int count = 5;
     public static String apiVersion = "5.85";
     public static String fields = "first_name,last_name,photo_max";
-    public static String redirectUrl = "http://127.0.0.1:8888/showFriends";
+    public static String redirectUrl = "http://188.166.194.200:8888/showFriends";
+    
 
     private static String sendRequest(String urlstr) throws IOException{
         final StringBuilder result = new StringBuilder();
         URL url = new URL(urlstr);
+        HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
+        try {
+            int codeResponse = urlConnection.getResponseCode();
+            if(codeResponse != 200) throw new BadResponseException(codeResponse);
+            InputStream in = urlConnection.getInputStream();
 
-        try (InputStream is = url.openStream()) {
-            BufferedReader reader = new BufferedReader(new InputStreamReader(is));
-            reader.lines().forEach(result::append);
+            Scanner scanner = new Scanner(in);
+            scanner.useDelimiter("\\A");  // Put entire content to next token string, Converts utf8 to 16, Handles buffering for different width packets
+
+            boolean hasInput = scanner.hasNext();
+            if (hasInput) {
+                return scanner.next();
+            } else {
+                return null;
+            }
+        } finally {
+            urlConnection.disconnect();
         }
-
-        return result.toString();
     }
 
     public void doGet(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse)
             throws IOException {
+
         try {
+            httpServletRequest.getSession().setAttribute("access_token", null);
             httpServletResponse.setContentType("text/html; charset=UTF-8");
+            //if(httpServletRequest.getSession().getAttribute("access_token") == null) {
+            if (this.getServletConfig().getServletContext().getAttribute("access_token") == null) {
+                String code = httpServletRequest.getParameter("code");
 
-            String code = httpServletRequest.getParameter("code");
+                StringBuilder adress = new StringBuilder();
+                adress.append("https://oauth.vk.com/access_token?");
 
-            StringBuilder adress = new StringBuilder();
-            adress.append("https://oauth.vk.com/access_token?");
+                adress.append("client_id=");
+                adress.append(appid);
+                adress.append("&");
 
-            adress.append("client_id=");
-            adress.append(appid);
-            adress.append("&");
+                adress.append("client_secret=");
+                adress.append(secret);
+                adress.append("&");
 
-            adress.append("client_secret=");
-            adress.append(secret);
-            adress.append("&");
+                adress.append("redirect_uri=");
+                adress.append(redirectUrl);
+                adress.append("&");
 
-            adress.append("redirect_uri=");
-            adress.append(redirectUrl);
-            adress.append("&");
+                adress.append("code=");
+                adress.append(code);
+                adress.append("&");
 
-            adress.append("code=");
-            adress.append(code);
-            adress.append("&");
-
-            JSONObject tokenInfo = new JSONObject(sendRequest(adress.toString()));
-            String token = tokenInfo.getString("access_token");
+                JSONObject tokenInfo = new JSONObject(sendRequest(adress.toString()));
+                String token = tokenInfo.getString("access_token");
+                //httpServletRequest.getSession().setAttribute("access_token", token);
+                this.getServletConfig().getServletContext().setAttribute("access_token", token);
+            }
 
 
             StringBuilder address = new StringBuilder();
@@ -84,38 +106,57 @@ public class ShowFriendsServlet extends HttpServlet {
             address.append("&");
 
             address.append("access_token=");
-            address.append(token);
+            address.append(this.getServletConfig().getServletContext().getAttribute("access_token"));
             address.append("&");
 
             address.append("v=");
             address.append(apiVersion);
             address.append("&");
 
-            JSONObject vkResponse = new JSONObject(sendRequest(address.toString()));
-            JSONArray items = vkResponse.getJSONObject("response").getJSONArray("items");
-
-            ArrayList<UserInfo> friends = new ArrayList();
-
-            for (int i = 0; i < items.length(); i++) {
-                JSONObject friend = items.getJSONObject(i);
-                friends.add(
-                        new UserInfo(
-                                friend.getString("first_name"),
-                                friend.getString("last_name"),
-                                new URL(friend.getString("photo_max"))
-                        )
-                );
+            Date timeOfLastrequest = (Date) (this.getServletConfig().getServletContext().getAttribute("timeOfLastRequest"));
+            if (timeOfLastrequest.getTime() - new Date().getTime() < 500) {
+                this.getServletConfig().getServletContext().setAttribute("timeOfLastRequest", new Date());
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
             }
-
-            httpServletRequest.setAttribute("usersInfo", friends);
             try {
-                httpServletRequest.getRequestDispatcher("listOfFriends.jsp").forward(httpServletRequest, httpServletResponse);
-            } catch (ServletException e) {
-                e.printStackTrace();
-            }
-        }catch(Exception e){
-            System.out.println("Oooops... :c");
-        }
+                JSONObject vkResponse = new JSONObject(sendRequest(address.toString()));
+                JSONArray items = vkResponse.getJSONObject("response").getJSONArray("items");
 
+                ArrayList<UserInfo> friends = new ArrayList();
+
+                for (int i = 0; i < items.length(); i++) {
+                    JSONObject friend = items.getJSONObject(i);
+                    friends.add(
+                            new UserInfo(
+                                    friend.getString("first_name"),
+                                    friend.getString("last_name"),
+                                    new URL(friend.getString("photo_max"))
+                            )
+                    );
+                }
+
+                httpServletRequest.setAttribute("usersInfo", friends);
+                try {
+                    httpServletRequest.getRequestDispatcher("listOfFriends.jsp").forward(httpServletRequest, httpServletResponse);
+                } catch (ServletException e) {
+                    e.printStackTrace();
+                }
+            } catch (BadResponseException e) {
+                httpServletResponse.sendRedirect("http://188.166.194.200:8888/redirectToAuth");
+            }
+        }catch(JSONException e){
+            System.out.println(e);
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e1) {
+                e1.printStackTrace();
+            }
+            httpServletResponse.sendRedirect("http://188.166.194.200:8888/redirectToAuth");
+
+        }
     }
 }
