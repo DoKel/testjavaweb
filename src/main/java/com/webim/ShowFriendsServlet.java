@@ -24,7 +24,7 @@ public class ShowFriendsServlet extends HttpServlet {
     public static int count = 5;
     public static String apiVersion = "5.85";
     public static String fields = "first_name,last_name,photo_max";
-    public static String redirectUrl = "http://127.0.0.1:8888/showFriends";
+    public static String redirectUrl = "http://188.166.194.200:8888/showFriends";
     
 
     private static String sendRequest(String urlstr) throws IOException{

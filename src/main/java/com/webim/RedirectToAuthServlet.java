@@ -10,7 +10,7 @@ public class RedirectToAuthServlet extends HttpServlet {
 
     public static long appid = 6713188;
     public static String displayType = "page";
-    public static String redirectUrl = "http://127.0.0.1:8888/showFriends";
+    public static String redirectUrl = "http://188.166.194.200:8888/showFriends";
     public static String permissions = "friends,offline";
     public static String responseType = "code";
     public static String apiVersion = "5.85";
