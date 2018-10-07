@@ -1,1 +1,3 @@
-org/mycompany/myname/HelloServlet.class
+com/webim/ShowFriendsServlet.class
+com/webim/RedirectToAuthServlet.class
+com/webim/UserInfo.class

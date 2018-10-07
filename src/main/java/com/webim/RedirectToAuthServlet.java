@@ -1,20 +1,16 @@
-package org.mycompany.myname;
-
-/**
- * Created by anon on 1/10/2017.
- */
+package com.webim;
 
 import javax.servlet.http.*;
 import java.io.IOException;
-import javax.servlet.*;
 import javax.servlet.http.HttpServlet;
 
 
-public class HelloServlet extends HttpServlet {
+public class RedirectToAuthServlet extends HttpServlet {
 
     public static long appid = 6713188;
     public static String displayType = "page";
-    public static String redirectUrl = "127.0.0.1:8888/";
+    public static String redirectUrl = "http://127.0.0.1:8888/showFriends";
+    public static String permissions = "friends,offline";
     public static String responseType = "code";
     public static String apiVersion = "5.85";
 
@@ -34,6 +30,10 @@ public class HelloServlet extends HttpServlet {
 
         address.append("redirect_uri=");
         address.append(redirectUrl);
+        address.append("&");
+
+        address.append("scope=");
+        address.append(permissions);
         address.append("&");
 
         address.append("response_type=");

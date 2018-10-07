@@ -1,7 +1,5 @@
 <html>
-    <body>
-        <h2>Hello World!</h2>
-        <br/>
-        <a href="servlet">Click here to see servlet</a>
-    </body>
+<head>
+    <meta http-equiv="refresh" content="0; url=/redirectToAuth" />
+</head>
 </html>

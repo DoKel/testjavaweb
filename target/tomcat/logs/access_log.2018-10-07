@@ -1,2 +1,5 @@
-0:0:0:0:0:0:0:1 - - [07/Oct/2018:01:55:37 +0300] "GET /servlet HTTP/1.1" 200 312 http-bio-8888-exec-1 45
-0:0:0:0:0:0:0:1 - - [07/Oct/2018:01:55:37 +0300] "GET /favicon.ico HTTP/1.1" 404 973 http-bio-8888-exec-2 6
+127.0.0.1 - - [07/Oct/2018:07:29:44 +0300] "GET / HTTP/1.1" 200 100 http-bio-8888-exec-1 684
+127.0.0.1 - - [07/Oct/2018:07:29:44 +0300] "GET /favicon.ico HTTP/1.1" 404 973 http-bio-8888-exec-2 4
+127.0.0.1 - - [07/Oct/2018:07:29:44 +0300] "GET /redirectToAuth HTTP/1.1" 302 - http-bio-8888-exec-3 4
+127.0.0.1 - - [07/Oct/2018:07:29:44 +0300] "GET /showFriends?code=886bcd884c264422b9 HTTP/1.1" 200 1576 http-bio-8888-exec-4 468
+127.0.0.1 - - [07/Oct/2018:07:29:44 +0300] "GET /favicon.ico HTTP/1.1" 404 973 http-bio-8888-exec-5 3
