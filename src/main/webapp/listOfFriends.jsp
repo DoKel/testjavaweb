@@ -12,7 +12,7 @@
 
     for(UserInfo userInfo : usersInfo)
     {
-        out.print("<a href=\"http:\/\/vk.com\/id"+userInfo.getId()+"\">");
+        out.print("<a href=\"http://vk.com/id"+userInfo.getId()+"\">");
         out.print("<div class=\"col s6 m2\" style=\"margin-left:0;\"><div class=\"card z-depth-4\"><div class=\"card-image\">");
         out.print("<img class=\"circle\" src=\""+userInfo.getPhotoUrl()+"\"></div>");
         out.print("<span class=\"card-title\">");
