@@ -8,13 +8,10 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Scanner;
@@ -27,7 +24,7 @@ public class ShowFriendsServlet extends HttpServlet {
     public static int count = 5;
     public static String apiVersion = "5.85";
     public static String fields = "first_name,last_name,photo_max";
-    public static String redirectUrl = "http://188.166.194.200:8888/showFriends";
+    public static String redirectUrl = "http://127.0.0.1:8888/showFriends";
     
 
     private static String sendRequest(String urlstr) throws IOException{
@@ -46,7 +43,7 @@ public class ShowFriendsServlet extends HttpServlet {
             if (hasInput) {
                 return scanner.next();
             } else {
-                return null;
+                throw new IOException();
             }
         } finally {
             urlConnection.disconnect();
@@ -55,13 +52,16 @@ public class ShowFriendsServlet extends HttpServlet {
 
     public void doGet(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse)
             throws IOException {
+            httpServletResponse.setContentType("text/html; charset=UTF-8"); //TODO mb move to listOfFriends
 
-        try {
-            httpServletRequest.getSession().setAttribute("access_token", null);
-            httpServletResponse.setContentType("text/html; charset=UTF-8");
-            //if(httpServletRequest.getSession().getAttribute("access_token") == null) {
-            if (this.getServletConfig().getServletContext().getAttribute("access_token") == null) {
+
+            String token = (String)httpServletRequest.getSession().getAttribute("access_token");
+            if(token == null) {
                 String code = httpServletRequest.getParameter("code");
+                if(code == null){
+                    httpServletResponse.sendRedirect("/redirectToAuth");
+                    return;
+                }
 
                 StringBuilder adress = new StringBuilder();
                 adress.append("https://oauth.vk.com/access_token?");
@@ -82,10 +82,22 @@ public class ShowFriendsServlet extends HttpServlet {
                 adress.append(code);
                 adress.append("&");
 
-                JSONObject tokenInfo = new JSONObject(sendRequest(adress.toString()));
-                String token = tokenInfo.getString("access_token");
-                //httpServletRequest.getSession().setAttribute("access_token", token);
-                this.getServletConfig().getServletContext().setAttribute("access_token", token);
+                Util.wait(this.getServletConfig());
+                String tokenInfoStr = null;
+                this.getServletConfig().getServletContext().setAttribute("timeOfLastRequest", new Date());
+                try {
+                    tokenInfoStr = sendRequest(adress.toString());
+                }catch(IOException e){
+                    httpServletResponse.sendRedirect("/redirectToAuth?revoke=1");
+                    return;
+                }
+
+                JSONObject tokenInfo = new JSONObject(tokenInfoStr);
+                token = tokenInfo.getString("access_token");
+                if(token == null){ //still?!! OMG
+                    httpServletResponse.sendRedirect("/redirectToAuth?revoke=1");
+                }
+                httpServletRequest.getSession().setAttribute("access_token", token);
             }
 
 
@@ -106,58 +118,60 @@ public class ShowFriendsServlet extends HttpServlet {
             address.append("&");
 
             address.append("access_token=");
-            address.append(this.getServletConfig().getServletContext().getAttribute("access_token"));
+            address.append(httpServletRequest.getSession().getAttribute("access_token"));
             address.append("&");
 
             address.append("v=");
             address.append(apiVersion);
             address.append("&");
 
-            Date timeOfLastrequest = (Date) (this.getServletConfig().getServletContext().getAttribute("timeOfLastRequest"));
-            if (timeOfLastrequest.getTime() - new Date().getTime() < 500) {
-                this.getServletConfig().getServletContext().setAttribute("timeOfLastRequest", new Date());
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
+            Util.wait(this.getServletConfig());
+            String vkResponceStr = null;
             try {
-                JSONObject vkResponse = new JSONObject(sendRequest(address.toString()));
-                JSONArray items = vkResponse.getJSONObject("response").getJSONArray("items");
-
-                ArrayList<UserInfo> friends = new ArrayList();
-
-                for (int i = 0; i < items.length(); i++) {
-                    JSONObject friend = items.getJSONObject(i);
-                    friends.add(
-                            new UserInfo(
-                                    friend.getString("first_name"),
-                                    friend.getString("last_name"),
-                                    new URL(friend.getString("photo_max")),
-                                    friend.getInt("id")
-                            )
-                    );
-                }
-
-                httpServletRequest.setAttribute("usersInfo", friends);
-                try {
-                    httpServletRequest.getRequestDispatcher("listOfFriends.jsp").forward(httpServletRequest, httpServletResponse);
-                } catch (ServletException e) {
-                    e.printStackTrace();
-                }
-            } catch (BadResponseException e) {
-                httpServletResponse.sendRedirect("http://188.166.194.200:8888/redirectToAuth");
+                vkResponceStr = sendRequest(address.toString());
+            }catch(IOException e){ //TODO handle exception
+                httpServletResponse.getWriter().println(e.getMessage());
+                return;
             }
-        }catch(JSONException e){
-            System.out.println(e);
+
+            //TODO make it all null-safe
+            JSONObject vkResponse = new JSONObject(vkResponceStr);
+            JSONArray items = vkResponse.getJSONObject("response").getJSONArray("items");
+
+            ArrayList<UserInfo> friends = new ArrayList();
+            for (int i = 0; i < items.length(); i++) {
+                JSONObject friend = items.getJSONObject(i);
+                friends.add(
+                        new UserInfo(
+                                friend.getString("first_name"),
+                                friend.getString("last_name"),
+                                new URL(friend.getString("photo_max")),
+                                friend.getInt("id")
+                        )
+                );
+            }
+            httpServletRequest.setAttribute("usersInfo", friends);
+
+
+            Util.wait(this.getServletConfig());
+            vkResponceStr = null;
             try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e1) {
-                e1.printStackTrace();
+                vkResponceStr = sendRequest("https://api.vk.com/method/users.get?v="+
+                        apiVersion+"&access_token="+token);
+            }catch(IOException e){ //TODO handle exception
+                httpServletResponse.getWriter().println(e.getMessage());
+                return;
             }
-            httpServletResponse.sendRedirect("http://188.166.194.200:8888/redirectToAuth");
+            System.out.println(vkResponceStr);
+            JSONObject json = new JSONObject(vkResponceStr).getJSONArray("response").getJSONObject(0); //TODO null safe
 
-        }
+            httpServletRequest.setAttribute("name", json.getString("first_name")+" "+json.getString("last_name"));
+
+            try {
+                httpServletRequest.getRequestDispatcher("listOfFriends.jsp").forward(httpServletRequest, httpServletResponse);
+            } catch (ServletException e) { //TODO handle exception
+                httpServletResponse.getWriter().println(e.getMessage());
+                return;
+            }
     }
 }
